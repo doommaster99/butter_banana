@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ร้านกล้วยอบเนย - สั่งซื้อออนไลน์</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: #F0FDF4;
+            background-image: radial-gradient(#bbf7d0 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .modal { transition: opacity 0.25s ease; }
+        body.modal-active { overflow-x: hidden; overflow-y: hidden; }
+    </style>
+</head>
+<body class="text-gray-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <nav class="bg-green-600 shadow-md sticky top-0 z-40 h-16">
+        <div class="max-w-6xl mx-auto px-4 h-full">
+            <div class="flex justify-between items-center h-full relative">
+                <div class="flex items-center gap-3 sm:gap-4">
+                    <img id="navLogo" src="https://placehold.co/100x100/EAB308/ffffff?text=Logo" data-fallback="https://placehold.co/100x100/EAB308/ffffff?text=Logo" onerror="imgFallback(this)" alt="Logo" class="relative top-3 z-50 flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-4 border-white shadow-lg bg-white">
+                    <span class="font-bold text-lg sm:text-xl text-white whitespace-nowrap">ร้านกล้วยอบเนย</span>
+                </div>
+                <div class="flex space-x-2 sm:space-x-4">
+                    <button onclick="switchView('customer-view')" class="text-white hover:text-yellow-400 font-medium transition-colors text-sm sm:text-base">หน้าสั่งซื้อ</button>
+                    <button onclick="scrollToContact()" class="text-white hover:text-yellow-400 font-medium transition-colors text-sm sm:text-base">ติดต่อเรา</button>
+                    <button onclick="checkAdminAccess()" class="bg-white text-green-600 px-3 py-1 rounded-full text-sm font-bold hover:bg-yellow-400 hover:text-white transition-colors shadow">Admin</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow max-w-6xl mx-auto px-4 py-8 w-full mt-4">
+
+        <!-- ================= CUSTOMER VIEW ================= -->
+        <div id="customer-view" class="block">
+            <div class="text-center mb-10">
+                <h1 class="text-4xl font-bold text-green-700 mb-2">สั่งซื้อกล้วยอบเนยแสนอร่อย</h1>
+                <p class="text-gray-600">กรอบ หอม หวานมัน เคี้ยวเพลินจนหยุดไม่ได้!</p>
+            </div>
+
+            <div class="space-y-10">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <span>🛍️</span> เลือกสินค้า
+                    </h2>
+                    <div id="product-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                </div>
+
+                <div class="max-w-2xl mx-auto w-full">
+                    <div class="bg-white rounded-3xl shadow-xl p-6 sm:p-8 border-t-8 border-yellow-400">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <span>🛒</span> สรุปคำสั่งซื้อ
+                        </h2>
+
+                        <div id="cart-items" class="space-y-3 mb-6 min-h-[100px] text-gray-600 text-sm">
+                            <p class="text-center text-gray-400 mt-8">ยังไม่มีสินค้าในตะกร้า</p>
+                        </div>
+
+                        <div class="bg-green-50 rounded-xl p-4 mb-6 border border-green-200">
+                            <div class="flex justify-between items-center mb-3 pb-3 border-b border-green-200">
+                                <div class="flex gap-3 text-base sm:text-lg font-medium text-green-700">
+                                    <span id="summary-box">กล่อง: <span class="text-xl sm:text-2xl font-bold text-green-600">0</span> ชิ้น</span>
+                                    <span id="summary-bucket">ถัง: <span class="text-xl sm:text-2xl font-bold text-green-600">0</span> ชิ้น</span>
+                                    <span id="summary-pack">ห่อ: <span class="text-xl sm:text-2xl font-bold text-green-600">0</span> ชิ้น</span>
+                                </div>
+                                <div class="text-base sm:text-lg font-medium text-green-700 whitespace-nowrap ml-4">
+                                    รวมทั้งหมด: <span id="summary-total-qty" class="text-xl sm:text-2xl font-bold text-green-600">0</span> ชิ้น
+                                </div>
+                            </div>
+                            <div class="flex justify-end items-end mt-2">
+                                <span class="text-gray-500 mr-2 mb-1">ยอดรวมทั้งสิ้น</span>
+                                <span id="grand-total" class="text-4xl font-bold text-yellow-500">0</span>
+                                <span class="text-gray-500 ml-1 mb-1">บาท</span>
+                            </div>
+                        </div>
+
+                        <form id="orderForm" onsubmit="handleOrderSubmit(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ-นามสกุล *</label>
+                                <input type="text" id="custName" required maxlength="100" class="w-full px-4 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-green-400 outline-none transition-shadow">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์ *</label>
+                                <input type="tel" id="custPhone" required maxlength="15" placeholder="เช่น 0812345678" class="w-full px-4 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-green-400 outline-none transition-shadow">
+                            </div>
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <label class="block text-sm font-medium text-gray-700">ที่อยู่จัดส่ง</label>
+                                    <button type="button" onclick="shareLocation()" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 px-2 py-1 rounded flex items-center transition-colors">
+                                        📍 แชร์พิกัด
+                                    </button>
+                                </div>
+                                <textarea id="custAddress" rows="3" maxlength="500" placeholder="เว้นว่างได้ หรือกดแชร์พิกัด" class="w-full px-4 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-green-400 outline-none transition-shadow resize-none"></textarea>
+                            </div>
+                            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-lg py-3 px-4 rounded-xl shadow-lg transition-transform transform hover:-translate-y-1 mt-4 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+                                ยืนยันการสั่งซื้อ
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= ADMIN LOGIN ================= -->
+        <div id="admin-login-view" class="hidden">
+            <div class="max-w-md mx-auto mt-20 bg-white p-8 rounded-3xl shadow-xl border-t-8 border-green-500 text-center">
+                <div class="text-5xl mb-4">🔒</div>
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">ผู้ดูแลระบบ</h2>
+                <form id="adminLoginForm" onsubmit="handleAdminLogin(event)" class="space-y-4">
+                    <div>
+                        <input type="password" id="adminPassword" placeholder="ใส่รหัสผ่าน" autocomplete="current-password" required class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-green-400 outline-none text-center text-lg">
+                    </div>
+                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl shadow transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+                        เข้าสู่ระบบ
+                    </button>
+                    <button type="button" onclick="switchView('customer-view')" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-xl transition-colors mt-2">
+                        กลับหน้าแรก
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ================= ADMIN DASHBOARD ================= -->
+        <div id="admin-dashboard-view" class="hidden">
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
+                <h1 class="text-3xl font-bold text-green-700 flex items-center gap-2">
+                    <span>⚙️</span> ระบบจัดการร้านค้า
+                </h1>
+                <button onclick="logout()" class="bg-gray-800 hover:bg-gray-900 text-white px-6 py-2 rounded-full font-medium transition-colors shadow">
+                    ออกจากระบบ
+                </button>
+            </div>
+
+            <!-- โลโก้ -->
+            <div class="bg-white rounded-3xl shadow-xl p-8 mb-6 border-t-8 border-yellow-400 flex flex-col md:flex-row items-center gap-8">
+                <div class="flex-shrink-0">
+                    <img id="adminLogoPreview" src="https://placehold.co/100x100/EAB308/ffffff?text=Logo" data-fallback="https://placehold.co/100x100/EAB308/ffffff?text=Logo" onerror="imgFallback(this)" alt="Logo Preview" class="w-32 h-32 rounded-full object-cover border-4 border-green-100 shadow-md">
+                </div>
+                <div class="flex-grow">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-2">อัปเดตโลโก้ร้านค้า</h2>
+                    <p class="text-gray-500 mb-4 text-sm">อัปโหลดรูปภาพใหม่ ระบบจะย่อขนาดและปรับเป็นวงกลมให้อัตโนมัติ (รองรับ JPG, PNG, WEBP)</p>
+                    <label class="cursor-pointer bg-green-100 hover:bg-green-200 text-green-700 font-medium px-4 py-2 rounded-lg transition-colors border border-green-300 inline-block">
+                        <span>📸 เลือกรูปโลโก้ใหม่</span>
+                        <input type="file" accept="image/jpeg,image/png,image/webp" class="hidden" onchange="handleLogoUpload(event)">
+                    </label>
+                </div>
+            </div>
+
+            <!-- รูปสินค้า -->
+            <div class="bg-white rounded-3xl shadow-xl p-8 mb-6 border-t-8 border-green-500">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">🖼️ จัดการรูปภาพสินค้า</h2>
+                <div id="admin-product-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+
+            <!-- เปลี่ยนรหัสผ่าน -->
+            <div id="change-password-card" class="bg-white rounded-3xl shadow-xl p-8 mb-6 border-t-8 border-green-500">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">🔑 เปลี่ยนรหัสผ่าน Admin</h2>
+                <form id="changePasswordForm" onsubmit="handleChangePassword(event)" class="space-y-4 max-w-md">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">รหัสผ่านปัจจุบัน</label>
+                        <input type="password" id="oldAdminPassword" required autocomplete="current-password" class="w-full px-4 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-green-400 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">รหัสผ่านใหม่</label>
+                        <input type="password" id="newAdminPassword" required autocomplete="new-password" placeholder="อย่างน้อย 6 ตัว" class="w-full px-4 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-green-400 outline-none">
+                        <p class="text-xs text-gray-500 mt-1">* ยาวอย่างน้อย 6 ตัว ใช้ได้เฉพาะ A-Z, a-z, 0-9 และต้องมีตัวอักษรภาษาอังกฤษอย่างน้อย 3 ตัว</p>
+                    </div>
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-xl shadow transition-colors w-full sm:w-auto">
+                        บันทึกรหัสผ่านใหม่
+                    </button>
+                </form>
+            </div>
+
+            <!-- รายการสั่งซื้อ -->
+            <div class="bg-white rounded-3xl shadow-xl p-8">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">📊 รายการสั่งซื้อทั้งหมด</h2>
+                        <p class="text-gray-500" id="totalOrdersSummary">จำนวน 0 รายการ</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="loadOrdersData()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg shadow flex items-center gap-2 font-medium transition-colors text-sm">🔄 รีเฟรช</button>
+                        <button onclick="downloadCSV()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow flex items-center gap-2 font-medium transition-colors text-sm">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            ดาวน์โหลด CSV
+                        </button>
+                        <button onclick="generatePDF()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg shadow flex items-center gap-2 font-medium transition-colors text-sm">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            ดาวน์โหลด PDF
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto rounded-xl border border-gray-200" id="pdf-content">
+                    <div id="pdf-header" class="hidden text-center mb-6 pt-4">
+                        <h2 class="text-2xl font-bold">รายงานการสั่งซื้อ ร้านกล้วยอบเนย</h2>
+                        <p class="text-gray-500" id="pdf-date"></p>
+                    </div>
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">วัน/เวลา</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ลูกค้า</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">รายการสินค้า</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ยอดรวม (บาท)</th>
+                                <th class="no-pdf px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersTableBody" class="bg-white divide-y divide-gray-200"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer id="contact-footer" class="bg-green-600 text-white mt-auto py-6">
+        <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row justify-center items-center gap-4 text-sm sm:text-base font-medium">
+            <span class="flex items-center gap-2">ติดต่อสอบถามรายละเอียดเพิ่มเติมได้ที่</span>
+            <span class="hidden sm:inline">|</span>
+            <a href="tel:0968634064" class="flex items-center gap-1 hover:text-yellow-400 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                096-863-4064
+            </a>
+            <span class="hidden sm:inline">|</span>
+            <a href="https://line.me/ti/p/~@thitima_nuphan" target="_blank" rel="noopener" class="flex items-center gap-1 hover:text-yellow-400 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                LINE: @thitima_nuphan
+            </a>
+        </div>
+    </footer>
+
+    <!-- Modal -->
+    <div id="customModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
+        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50" onclick="closeModal()"></div>
+        <div class="modal-container bg-white w-11/12 md:max-w-md mx-auto rounded-2xl shadow-2xl z-50 overflow-y-auto">
+            <div class="modal-content py-6 text-left px-6">
+                <div class="flex justify-between items-center pb-3">
+                    <p class="text-2xl font-bold text-gray-800" id="modalTitle">แจ้งเตือน</p>
+                    <div class="modal-close cursor-pointer z-50 text-gray-400 hover:text-red-500 transition-colors" onclick="closeModal()">
+                        <svg class="fill-current text-black" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 18 18">
+                            <path d="M14.53 4.53l-1.06-1.06L9 7.94 4.53 3.47 3.47 4.53 7.94 9l-4.47 4.47 1.06 1.06L9 10.06l4.47 4.47 1.06-1.06L10.06 9z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <p class="text-gray-600 mt-2 whitespace-pre-line" id="modalMessage">ข้อความ</p>
+                <div class="flex justify-end pt-4 mt-4">
+                    <button onclick="closeModal()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition-colors">ตกลง</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal (ยกเลิก / ตกลง) -->
+    <div id="confirmModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
+        <div class="absolute w-full h-full bg-gray-900 opacity-50" onclick="closeConfirm(false)"></div>
+        <div class="bg-white w-11/12 md:max-w-md mx-auto rounded-2xl shadow-2xl z-50 overflow-y-auto">
+            <div class="py-6 px-6">
+                <p class="text-2xl font-bold text-gray-800" id="confirmTitle">ยืนยัน</p>
+                <p class="text-gray-600 mt-3 whitespace-pre-line break-words" id="confirmMessage">ข้อความ</p>
+                <div class="flex justify-end gap-3 pt-5 mt-4">
+                    <button type="button" onclick="closeConfirm(false)" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-6 rounded-lg transition-colors">ยกเลิก</button>
+                    <button type="button" onclick="closeConfirm(true)" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg transition-colors">ตกลง</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toastNotification" class="fixed bottom-5 right-5 bg-green-600 text-white px-5 py-3 rounded-xl shadow-2xl transform translate-x-[150%] transition-transform duration-300 z-50 flex items-center gap-3">
+        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span id="toastMessage" class="font-medium">แจ้งเตือน</span>
+    </div>
+
+    <script>
+        // ---------------------------------------------------------
+        // Config / State
+        // ---------------------------------------------------------
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzQY1N8vILBa38CAxhixNDK33TJ6rfGFfeSyY-D5nMDIA3KmfeaXn3pDqMwkSr04nE1/exec';
+        const MAX_QTY = 500;
+        const FALLBACK_IMG = 'https://placehold.co/400x300/EAB308/ffffff?text=No+Image';
+
+        let currentToken = '';
+        let isAdminLoggedIn = false;
+        let isSubmitting = false;
+        let orders = [];
+        let currentLogo = 'https://placehold.co/100x100/EAB308/ffffff?text=Logo';
+
+        // ราคาต้องตรงกับ PRODUCTS ใน Code.gs (เซิร์ฟเวอร์เป็นผู้คำนวณยอดจริง)
+        const products = [
+            { id: 'p1', name: 'กล้วยอบเนย (กล่อง)', price: 50, image: 'https://placehold.co/400x300/EAB308/ffffff?text=Banana+Box' },
+            { id: 'p2', name: 'กล้วยออริจินัล (กล่อง)', price: 50, image: 'https://placehold.co/400x300/EAB308/ffffff?text=Original+Box' },
+            { id: 'p3', name: 'กล้วยอบเนย (ถัง)', price: 50, image: 'https://placehold.co/400x300/EAB308/ffffff?text=Banana+Bucket' },
+            { id: 'p4', name: 'กล้วยออริจินัล (ถัง)', price: 50, image: 'https://placehold.co/400x300/EAB308/ffffff?text=Original+Bucket' },
+            { id: 'p5', name: 'กล้วยอบเนย (ห่อเล็ก)', price: 20, promoQty: 12, promoPrice: 200, image: 'https://placehold.co/400x300/EAB308/ffffff?text=Banana+Pack' },
+            { id: 'p6', name: 'กล้วยออริจินัล (ห่อเล็ก)', price: 20, promoQty: 12, promoPrice: 200, image: 'https://placehold.co/400x300/EAB308/ffffff?text=Original+Pack' }
+        ];
+
+        function emptyCart() {
+            const c = {};
+            products.forEach(p => { c[p.id] = 0; });
+            return c;
+        }
+        let cart = emptyCart();
+
+        // ---------------------------------------------------------
+        // Helpers (ความปลอดภัย)
+        // ---------------------------------------------------------
+        function escapeHTML(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c =>
+                ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function safeUrl(u) {
+            return /^https:\/\//i.test(String(u || '')) ? String(u) : FALLBACK_IMG;
+        }
+
+        function imgFallback(el) {
+            el.onerror = null;
+            el.src = el.dataset.fallback || FALLBACK_IMG;
+        }
+
+        function calcItemTotal(product, qty) {
+            if (product.promoQty && qty >= product.promoQty) {
+                return Math.floor(qty / product.promoQty) * product.promoPrice + (qty % product.promoQty) * product.price;
+            }
+            return qty * product.price;
+        }
+
+        // ---------------------------------------------------------
+        // API
+        // ---------------------------------------------------------
+        async function apiCall(action, payload = {}) {
+            const body = { action, token: currentToken, ...payload };
+            return new Promise((resolve) => {
+                if (typeof google !== 'undefined' && google.script && google.script.run) {
+                    google.script.run
+                        .withSuccessHandler((result) => {
+                            try { resolve(JSON.parse(result)); }
+                            catch (e) { resolve({ success: false, message: 'เซิร์ฟเวอร์ตอบกลับผิดปกติ' }); }
+                        })
+                        .withFailureHandler((error) => {
+                            console.warn('Google Script Error:', error);
+                            resolve({ success: false, message: 'เกิดข้อผิดพลาดในการเชื่อมต่อ' });
+                        })
+                        .processApiAction(action, body);
+                } else {
+                    fetch(WEB_APP_URL, {
+                        method: 'POST',
+                        redirect: 'follow',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(body)
+                    })
+                    .then(res => res.text())
+                    .then(text => {
+                        try { resolve(JSON.parse(text)); }
+                        catch (e) { resolve({ success: false, message: 'เซิร์ฟเวอร์ตอบกลับผิดปกติ' }); }
+                    })
+                    .catch(() => {
+                        resolve({ success: false, message: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ (ตรวจสอบว่า Deploy เป็น "Anyone" และเป็นเวอร์ชันล่าสุด)' });
+                    });
+                }
+            });
+        }
+
+        // token หมดอายุ/ไม่ถูกต้อง -> กลับไปหน้าล็อกอิน
+        function handleUnauthorized(res) {
+            if (res && res.message === 'Unauthorized') {
+                isAdminLoggedIn = false;
+                currentToken = '';
+                orders = [];
+                switchView('admin-login-view');
+                showModal('หมดเวลาเข้าสู่ระบบ', 'กรุณาเข้าสู่ระบบใหม่อีกครั้ง');
+                return true;
+            }
+            return false;
+        }
+
+        // ---------------------------------------------------------
+        // สินค้า + ตะกร้า
+        // ---------------------------------------------------------
+        function formatProductName(name) {
+            return escapeHTML(name).replace(/\((.*?)\)/g, '<br><span class="text-sm text-gray-500 font-normal">($1)</span>');
+        }
+
+        function renderCustomerProducts() {
+            const container = document.getElementById('product-container');
+            container.innerHTML = '';
+
+            products.forEach(p => {
+                const promoBadge = p.promoQty ? `<div class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded shadow">PROMO</div>` : '';
+                const promoText = p.promoQty ? `<p class="text-xs text-red-500 mt-1">🔥 ${p.promoQty} ห่อ เพียง ${p.promoPrice} บาท</p>` : '';
+
+                container.innerHTML += `
+                    <div class="bg-white rounded-2xl shadow hover:shadow-lg transition-shadow overflow-hidden border border-gray-100 flex flex-row relative">
+                        ${promoBadge}
+                        <div class="w-1/3 sm:w-2/5 h-32 sm:h-auto overflow-hidden">
+                            <img src="${escapeHTML(safeUrl(p.image))}" onerror="imgFallback(this)" alt="${escapeHTML(p.name)}" class="w-full h-full object-cover transform hover:scale-110 transition-transform duration-500">
+                        </div>
+                        <div class="w-2/3 sm:w-3/5 p-4 flex flex-col justify-between">
+                            <div>
+                                <h3 class="font-bold text-gray-800 leading-tight">${formatProductName(p.name)}</h3>
+                                <p class="text-yellow-500 font-semibold mt-1">ราคา ${p.price} บาท</p>
+                                ${promoText}
+                            </div>
+                            <div class="flex items-center justify-between mt-3 bg-green-50 rounded-full p-1 border border-green-100">
+                                <button type="button" onclick="updateQty('${p.id}', -1)" class="w-8 h-8 rounded-full bg-white text-green-600 hover:bg-green-200 font-bold text-lg shadow-sm transition-colors select-none flex items-center justify-center">-</button>
+                                <span class="font-bold text-green-800 px-2 w-10 text-center select-none" id="qty-${p.id}">${cart[p.id]}</span>
+                                <button type="button" onclick="updateQty('${p.id}', 1)" class="w-8 h-8 rounded-full bg-green-500 text-white hover:bg-green-600 font-bold text-lg shadow-sm transition-colors select-none flex items-center justify-center">+</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            updateCartSummary();
+        }
+
+        function renderAdminProducts() {
+            const container = document.getElementById('admin-product-container');
+            container.innerHTML = '';
+
+            products.forEach(p => {
+                container.innerHTML += `
+                    <div class="bg-gray-50 rounded-xl p-4 border border-gray-200 flex flex-row gap-4 items-center">
+                        <img id="admin-img-${p.id}" src="${escapeHTML(safeUrl(p.image))}" onerror="imgFallback(this)" alt="${escapeHTML(p.name)}" class="w-24 h-24 rounded-lg object-cover shadow-sm">
+                        <div class="flex-grow">
+                            <h3 class="font-bold text-gray-800">${escapeHTML(p.name)}</h3>
+                            <p class="text-sm text-gray-500 mb-2">ราคา ${p.price} บาท</p>
+                            <label class="cursor-pointer bg-white hover:bg-gray-100 text-gray-700 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors border border-gray-300 inline-block shadow-sm">
+                                <span>📸 เปลี่ยนรูป</span>
+                                <input type="file" accept="image/jpeg,image/png,image/webp" class="hidden" onchange="handleImageUpload(event, '${p.id}')">
+                            </label>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function updateQty(id, change) {
+            const newQty = Math.min(MAX_QTY, Math.max(0, cart[id] + change));
+            cart[id] = newQty;
+            document.getElementById(`qty-${id}`).innerText = newQty;
+            updateCartSummary();
+        }
+
+        function updateCartSummary() {
+            const container = document.getElementById('cart-items');
+            container.innerHTML = '';
+
+            let grandTotal = 0, totalItems = 0, boxCount = 0, bucketCount = 0, packCount = 0;
+
+            for (const [id, qty] of Object.entries(cart)) {
+                if (qty > 0) {
+                    const product = products.find(p => p.id === id);
+                    const itemTotal = calcItemTotal(product, qty);
+                    grandTotal += itemTotal;
+                    totalItems += qty;
+
+                    if (product.name.includes('กล่อง')) boxCount += qty;
+                    else if (product.name.includes('ถัง')) bucketCount += qty;
+                    else if (product.name.includes('ห่อ')) packCount += qty;
+
+                    container.innerHTML += `
+                        <div class="flex justify-between items-center border-b border-gray-100 pb-2">
+                            <div>
+                                <span class="font-medium text-gray-800">${escapeHTML(product.name)}</span>
+                                <span class="text-green-600 font-bold ml-2">x${qty}</span>
+                            </div>
+                            <span class="font-medium text-gray-800">${itemTotal} ฿</span>
+                        </div>
+                    `;
+                }
+            }
+
+            if (totalItems === 0) {
+                container.innerHTML = '<p class="text-center text-gray-400 mt-8">ยังไม่มีสินค้าในตะกร้า</p>';
+            }
+
+            document.getElementById('summary-box').innerHTML = `กล่อง: <span class="text-xl sm:text-2xl font-bold text-green-600">${boxCount}</span> ชิ้น`;
+            document.getElementById('summary-bucket').innerHTML = `ถัง: <span class="text-xl sm:text-2xl font-bold text-green-600">${bucketCount}</span> ชิ้น`;
+            document.getElementById('summary-pack').innerHTML = `ห่อ: <span class="text-xl sm:text-2xl font-bold text-green-600">${packCount}</span> ชิ้น`;
+            document.getElementById('summary-total-qty').innerText = totalItems;
+            document.getElementById('grand-total').innerText = grandTotal.toLocaleString();
+        }
+
+        // ---------------------------------------------------------
+        // อัปโหลดรูป (ย่อขนาดก่อนส่ง)
+        // ---------------------------------------------------------
+        function resizeImage(file, maxSide, quality = 0.85) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onerror = () => reject(new Error('อ่านไฟล์ไม่สำเร็จ'));
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onerror = () => reject(new Error('ไฟล์นี้ไม่ใช่รูปภาพที่รองรับ'));
+                    img.onload = () => {
+                        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+                        const w = Math.max(1, Math.round(img.width * scale));
+                        const h = Math.max(1, Math.round(img.height * scale));
+                        const canvas = document.createElement('canvas');
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, 0, w, h);
+                        ctx.drawImage(img, 0, 0, w, h);
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function uploadImageFile(file, type, maxSide) {
+            try {
+                showToast('⏳ กำลังย่อและอัปโหลดรูปภาพ...');
+                const base64 = await resizeImage(file, maxSide);
+                const res = await apiCall('uploadImage', { type, base64 });
+                if (handleUnauthorized(res)) return null;
+                if (!res.success) {
+                    showModal('อัปโหลดไม่สำเร็จ', res.message);
+                    return null;
+                }
+                return res.data.url;
+            } catch (err) {
+                showModal('อัปโหลดไม่สำเร็จ', err.message);
+                return null;
+            }
+        }
+
+        async function handleImageUpload(event, productId) {
+            const input = event.target;
+            const file = input.files[0];
+            input.value = '';
+            if (!file) return;
+
+            const url = await uploadImageFile(file, productId, 1000);
+            if (!url) return;
+
+            const p = products.find(x => x.id === productId);
+            if (p) {
+                p.image = url;
+                document.getElementById(`admin-img-${productId}`).src = safeUrl(url);
+                renderCustomerProducts();
+                showToast(`✅ บันทึกรูปภาพ ${p.name} เรียบร้อย`);
+            }
+        }
+
+        async function handleLogoUpload(event) {
+            const input = event.target;
+            const file = input.files[0];
+            input.value = '';
+            if (!file) return;
+
+            const url = await uploadImageFile(file, 'logo', 400);
+            if (!url) return;
+
+            currentLogo = url;
+            document.getElementById('navLogo').src = safeUrl(url);
+            document.getElementById('adminLogoPreview').src = safeUrl(url);
+            showToast('✅ บันทึกโลโก้ร้านเรียบร้อย');
+        }
+
+        // ---------------------------------------------------------
+        // รหัสผ่าน / ล็อกอิน
+        // ---------------------------------------------------------
+        async function handleChangePassword(e) {
+            e.preventDefault();
+            const oldPwd = document.getElementById('oldAdminPassword').value;
+            const newPwd = document.getElementById('newAdminPassword').value;
+
+            const letterCount = (newPwd.match(/[a-zA-Z]/g) || []).length;
+            if (!/^[a-zA-Z0-9]{6,64}$/.test(newPwd) || letterCount < 3) {
+                showModal('รูปแบบไม่ถูกต้อง', 'รหัสผ่านใหม่ต้องยาวอย่างน้อย 6 ตัว ใช้ได้เฉพาะ A-Z, a-z, 0-9 และมีตัวอักษรภาษาอังกฤษอย่างน้อย 3 ตัว');
+                return;
+            }
+
+            showToast('⏳ กำลังเปลี่ยนรหัสผ่าน...');
+            const res = await apiCall('changePassword', { oldPassword: oldPwd, newPassword: newPwd });
+            if (handleUnauthorized(res)) return;
+
+            if (res.success) {
+                document.getElementById('changePasswordForm').reset();
+                showModal('สำเร็จ', 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว');
+            } else {
+                showModal('ผิดพลาด', res.message);
+            }
+        }
+
+        async function handleAdminLogin(e) {
+            e.preventDefault();
+            const form = e.target;
+            const btn = form.querySelector('button[type="submit"]');
+            const pwd = document.getElementById('adminPassword').value;
+
+            btn.disabled = true;
+            showToast('⏳ กำลังตรวจสอบรหัสผ่าน...');
+            try {
+                const res = await apiCall('login', { password: pwd });
+                if (res.success) {
+                    isAdminLoggedIn = true;
+                    currentToken = res.data.token;
+                    document.getElementById('adminPassword').value = '';
+                    renderAdminProducts();
+                    switchView('admin-dashboard-view');
+                    loadOrdersData();
+                    if (res.data.mustChange) {
+                        showModal('กรุณาเปลี่ยนรหัสผ่าน', 'ตอนนี้ยังใช้รหัสผ่านเริ่มต้นอยู่ เพื่อความปลอดภัยโปรดเปลี่ยนรหัสผ่านทันที');
+                        document.getElementById('change-password-card').scrollIntoView({ behavior: 'smooth' });
+                    }
+                } else {
+                    showModal('ผิดพลาด', res.message || 'รหัสผ่านไม่ถูกต้อง');
+                }
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function logout() {
+            if (currentToken) apiCall('logout');   // ยกเลิก token ฝั่งเซิร์ฟเวอร์
+            isAdminLoggedIn = false;
+            currentToken = '';
+            orders = [];
+            document.getElementById('ordersTableBody').innerHTML = '';
+            switchView('customer-view');
+            showToast('✅ ออกจากระบบเรียบร้อย');
+        }
+
+        function checkAdminAccess() {
+            if (isAdminLoggedIn) {
+                renderAdminProducts();
+                switchView('admin-dashboard-view');
+                loadOrdersData();
+            } else {
+                switchView('admin-login-view');
+                document.getElementById('adminPassword').value = '';
+            }
+        }
+
+        // ---------------------------------------------------------
+        // พิกัด / หน้าจอ
+        // ---------------------------------------------------------
+        function shareLocation() {
+            if (!('geolocation' in navigator)) {
+                showModal('ไม่รองรับ', 'อุปกรณ์ของคุณไม่รองรับการแชร์พิกัด GPS กรุณากรอกที่อยู่ด้วยตนเอง');
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(function (position) {
+                const mapsUrl = `https://maps.google.com/?q=${position.coords.latitude},${position.coords.longitude}`;
+                const addrInput = document.getElementById('custAddress');
+                addrInput.value = (addrInput.value ? addrInput.value + '\n' : '') + 'พิกัดจัดส่ง: ' + mapsUrl;
+            }, function () {
+                showModal('ไม่สามารถแชร์พิกัดได้', 'กรุณาอนุญาตให้เบราว์เซอร์เข้าถึงตำแหน่ง หรือกรอกที่อยู่/วางลิงก์ Google Maps ด้วยตนเอง');
+            }, { timeout: 10000 });
+        }
+
+        function switchView(viewId) {
+            ['customer-view', 'admin-login-view', 'admin-dashboard-view'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(viewId).classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+
+        function scrollToContact() {
+            if (document.getElementById('customer-view').classList.contains('hidden')) {
+                switchView('customer-view');
+            }
+            document.getElementById('contact-footer').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // ---------------------------------------------------------
+        // สั่งซื้อ
+        // ---------------------------------------------------------
+        async function handleOrderSubmit(e) {
+            e.preventDefault();
+            if (isSubmitting) return;
+
+            const totalItems = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
+            if (totalItems === 0) {
+                showModal('ตะกร้าว่างเปล่า', 'กรุณาเลือกสินค้าอย่างน้อย 1 รายการก่อนยืนยันการสั่งซื้อครับ');
+                return;
+            }
+
+            const name = document.getElementById('custName').value.trim();
+            const phone = document.getElementById('custPhone').value.replace(/\D/g, '');
+            const address = document.getElementById('custAddress').value.trim();
+
+            if (!name) {
+                showModal('ข้อมูลไม่ครบ', 'กรุณากรอกชื่อ-นามสกุล');
+                return;
+            }
+            if (!/^\d{9,10}$/.test(phone)) {
+                showModal('เบอร์โทรไม่ถูกต้อง', 'กรุณากรอกเบอร์โทรเป็นตัวเลข 9-10 หลัก (ใส่ขีดหรือเว้นวรรคได้)');
+                return;
+            }
+
+            const cartPayload = {};
+            for (const [id, qty] of Object.entries(cart)) {
+                if (qty > 0) cartPayload[id] = qty;
+            }
+
+            const submitBtn = document.querySelector('#orderForm button[type="submit"]');
+            isSubmitting = true;
+            submitBtn.disabled = true;
+            showToast('⏳ กำลังบันทึกคำสั่งซื้อ...');
+
+            try {
+                const res = await apiCall('saveOrder', { name, phone, address, cart: cartPayload });
+                if (res.success) {
+                    document.getElementById('orderForm').reset();
+                    cart = emptyCart();
+                    renderCustomerProducts();
+                    const total = Number(res.data && res.data.total) || 0;
+                    showModal('สำเร็จ!', `ขอบคุณสำหรับการสั่งซื้อ 🍌\nยอดรวม ${total.toLocaleString()} บาท\nเราได้รับข้อมูลของคุณและบันทึกลงระบบแล้ว`);
+                } else {
+                    showModal('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้: ' + res.message);
+                }
+            } finally {
+                isSubmitting = false;
+                submitBtn.disabled = false;
+            }
+        }
+
+        // ---------------------------------------------------------
+        // ลบรายการสั่งซื้อ (มี popup ยืนยัน)
+        // ---------------------------------------------------------
+        let confirmCallback = null;
+
+        function showConfirm(title, message, onOk) {
+            document.getElementById('confirmTitle').innerText = title;
+            document.getElementById('confirmMessage').innerText = message;
+            confirmCallback = onOk;
+            document.getElementById('confirmModal').classList.remove('opacity-0', 'pointer-events-none');
+            document.body.classList.add('modal-active');
+        }
+
+        function closeConfirm(ok) {
+            const cb = confirmCallback;
+            confirmCallback = null;
+            document.getElementById('confirmModal').classList.add('opacity-0', 'pointer-events-none');
+            document.body.classList.remove('modal-active');
+            if (ok && cb) cb();
+        }
+
+        function confirmDeleteOrder(id) {
+            const o = orders.find(x => String(x.id) === String(id));
+            const label = o ? `${o.name}\n${o.timestamp}\n${o.items}` : String(id);
+            showConfirm('ยืนยันการลบรายการ', `ต้องการลบรายการสั่งซื้อนี้ใช่หรือไม่?\n\n${label}\n\nการลบไม่สามารถกู้คืนได้`, () => deleteOrder(id));
+        }
+
+        async function deleteOrder(id) {
+            showToast('⏳ กำลังลบรายการ...');
+            const res = await apiCall('deleteOrder', { id: String(id) });
+            if (handleUnauthorized(res)) return;
+            if (res.success) {
+                orders = orders.filter(x => String(x.id) !== String(id));
+                renderOrdersTable();
+                showToast('✅ ลบรายการเรียบร้อยแล้ว');
+            } else {
+                showModal('ลบไม่สำเร็จ', res.message);
+                loadOrdersData();
+            }
+        }
+
+        async function loadOrdersData() {
+            showToast('⏳ กำลังดึงข้อมูลคำสั่งซื้อ...');
+            const res = await apiCall('getOrders');
+            if (handleUnauthorized(res)) return;
+            if (res.success) {
+                orders = res.data;
+                renderOrdersTable();
+            } else {
+                showModal('ผิดพลาด', res.message);
+            }
+        }
+
+        function renderOrdersTable() {
+            const tbody = document.getElementById('ordersTableBody');
+            tbody.innerHTML = '';
+
+            [...orders].sort((a, b) => Number(b.id) - Number(a.id)).forEach(order => {
+                const address = order.address
+                    ? `<br><span class="text-xs text-blue-500 font-normal">📍 ${escapeHTML(order.address).replace(/\n/g, '<br>')}</span>` : '';
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${escapeHTML(order.timestamp)}</td>
+                        <td class="px-6 py-4 text-sm font-medium text-gray-900 break-words max-w-xs">
+                            ${escapeHTML(order.name)}<br>
+                            <span class="text-gray-500 font-normal">📞 ${escapeHTML(order.phone)}</span>
+                            ${address}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500 max-w-xs break-words">${escapeHTML(order.items)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-yellow-500">${Number(order.total).toLocaleString()} ฿</td>
+                        <td class="no-pdf px-6 py-4 whitespace-nowrap text-center">
+                            <button type="button" data-id="${escapeHTML(order.id)}" onclick="confirmDeleteOrder(this.dataset.id)" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">🗑️ ลบ</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('totalOrdersSummary').innerText = `จำนวน ${orders.length} รายการ`;
+        }
+
+        // ---------------------------------------------------------
+        // Export
+        // ---------------------------------------------------------
+        function generatePDF() {
+            if (orders.length === 0) {
+                showModal('ข้อมูลว่างเปล่า', 'ไม่มีรายการสั่งซื้อให้ดาวน์โหลด');
+                return;
+            }
+            const element = document.getElementById('pdf-content');
+            const header = document.getElementById('pdf-header');
+            document.getElementById('pdf-date').innerText = `ข้อมูล ณ วันที่: ${new Date().toLocaleString('th-TH')}`;
+            header.classList.remove('hidden');
+            element.querySelectorAll('.no-pdf').forEach(el => el.classList.add('hidden'));   // ซ่อนคอลัมน์ "จัดการ" ใน PDF
+
+            const opt = {
+                margin: 10,
+                filename: `รายการสั่งซื้อ_${Date.now()}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            showToast('⏳ กำลังสร้างไฟล์ PDF...');
+            html2pdf().set(opt).from(element).save()
+                .catch(() => showModal('ผิดพลาด', 'สร้างไฟล์ PDF ไม่สำเร็จ'))
+                .finally(() => {
+                    header.classList.add('hidden');
+                    element.querySelectorAll('.no-pdf').forEach(el => el.classList.remove('hidden'));
+                });
+        }
+
+        // กัน CSV/Excel formula injection
+        function csvCell(v) {
+            let s = String(v ?? '');
+            if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+            return '"' + s.replace(/"/g, '""') + '"';
+        }
+
+        function downloadCSV() {
+            if (orders.length === 0) {
+                showModal('ข้อมูลว่างเปล่า', 'ไม่มีรายการสั่งซื้อให้ดาวน์โหลด');
+                return;
+            }
+
+            let csv = '\uFEFF';
+            csv += 'ลำดับ,เวลาสั่งซื้อ,ชื่อลูกค้า,เบอร์โทร,รายการสินค้า,ยอดรวม (บาท),ที่อยู่จัดส่ง\n';
+
+            orders.forEach((order, index) => {
+                const phoneDigits = String(order.phone).replace(/\D/g, '');
+                const row = [
+                    index + 1,
+                    csvCell(order.timestamp),
+                    csvCell(order.name),
+                    `="${phoneDigits}"`,            // คงเลข 0 นำหน้าใน Excel (เป็นตัวเลขล้วนปลอดภัย)
+                    csvCell(order.items),
+                    Number(order.total) || 0,
+                    csvCell(order.address)
+                ].join(',');
+                csv += row + '\n';
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `รายการสั่งซื้อ_${Date.now()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        // ---------------------------------------------------------
+        // Modal / Toast
+        // ---------------------------------------------------------
+        function showModal(title, message) {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalMessage').innerText = message;
+            document.getElementById('customModal').classList.remove('opacity-0', 'pointer-events-none');
+            document.body.classList.add('modal-active');
+        }
+
+        function closeModal() {
+            document.getElementById('customModal').classList.add('opacity-0', 'pointer-events-none');
+            document.body.classList.remove('modal-active');
+        }
+
+        let toastTimer = null;
+        function showToast(message) {
+            const toast = document.getElementById('toastNotification');
+            document.getElementById('toastMessage').innerText = message;
+            toast.classList.remove('translate-x-[150%]');
+            toast.classList.add('translate-x-0');
+
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                toast.classList.remove('translate-x-0');
+                toast.classList.add('translate-x-[150%]');
+            }, 3000);
+        }
+
+        // ---------------------------------------------------------
+        // Init
+        // ---------------------------------------------------------
+        async function initApp() {
+            try { renderCustomerProducts(); } catch (err) { console.error('Render Error:', err); }
+
+            try {
+                const res = await apiCall('init');
+                if (res.success && res.data) {
+                    if (res.data.LOGO_URL) {
+                        currentLogo = safeUrl(res.data.LOGO_URL);
+                        document.getElementById('navLogo').src = currentLogo;
+                        document.getElementById('adminLogoPreview').src = currentLogo;
+                    }
+                    let needUpdate = false;
+                    products.forEach(p => {
+                        const u = res.data[`IMG_${p.id}`];
+                        if (u) { p.image = u; needUpdate = true; }
+                    });
+                    if (needUpdate) renderCustomerProducts();
+                }
+            } catch (e) {
+                console.log('ใช้งานรูปภาพตัวอย่างเริ่มต้น');
+            }
+        }
+
+        initApp();
+    </script>
+</body>
+</html>
