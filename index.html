@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ร้านกล้วยไข่อบเนย - สั่งซื้อออนไลน์</title>
+    <title>ร้านกล้วยอบเนย - สั่งซื้อออนไลน์</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link rel="preconnect" href="https://drive.google.com">
+    <link rel="preconnect" href="https://lh3.googleusercontent.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -26,7 +27,7 @@
             <div class="flex justify-between items-center h-full relative">
                 <div class="flex items-center gap-3 sm:gap-4">
                     <img id="navLogo" src="https://placehold.co/100x100/EAB308/ffffff?text=Logo" data-fallback="https://placehold.co/100x100/EAB308/ffffff?text=Logo" onerror="imgFallback(this)" alt="Logo" class="relative top-3 z-50 flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-4 border-white shadow-lg bg-white">
-                    <span class="font-bold text-lg sm:text-xl text-white whitespace-nowrap">ร้านกล้วยไข่อบเนย</span>
+                    <span class="font-bold text-lg sm:text-xl text-white whitespace-nowrap">ร้านกล้วยอบเนย</span>
                 </div>
                 <div class="flex space-x-2 sm:space-x-4">
                     <button onclick="switchView('customer-view')" class="text-white hover:text-yellow-400 font-medium transition-colors text-sm sm:text-base">หน้าสั่งซื้อ</button>
@@ -42,9 +43,8 @@
         <!-- ================= CUSTOMER VIEW ================= -->
         <div id="customer-view" class="block">
             <div class="text-center mb-10">
-                <h1 class="text-4xl font-bold text-green-700 mb-2">สั่งซื้อกล้วยไข่อบเนย</h1>
+                <h1 class="text-4xl font-bold text-green-700 mb-2">สั่งซื้อกล้วยอบเนยแสนอร่อย</h1>
                 <p class="text-gray-600">กรอบ หอม หวานมัน เคี้ยวเพลินจนหยุดไม่ได้!</p>
-               <p class="text-gray-600">ผลิตจากวัตถุดิบธรรมชาติ ไร้ไขมัน ไม่มีวัตถุกันเสีย</p>
             </div>
 
             <div class="space-y-10">
@@ -324,6 +324,11 @@
             return /^https:\/\//i.test(String(u || '')) ? String(u) : FALLBACK_IMG;
         }
 
+        // ปรับขนาดรูปจาก Google Drive (พารามิเตอร์ sz=wXXXX) ให้เล็กลงตามที่แสดงจริง
+        function sizedUrl(u, w) {
+            return safeUrl(u).replace(/([?&]sz=w)\d+/, '$1' + w);
+        }
+
         function imgFallback(el) {
             el.onerror = null;
             el.src = el.dataset.fallback || FALLBACK_IMG;
@@ -404,7 +409,7 @@
                     <div class="bg-white rounded-2xl shadow hover:shadow-lg transition-shadow overflow-hidden border border-gray-100 flex flex-row relative">
                         ${promoBadge}
                         <div class="w-1/3 sm:w-2/5 h-32 sm:h-auto overflow-hidden">
-                            <img src="${escapeHTML(safeUrl(p.image))}" onerror="imgFallback(this)" alt="${escapeHTML(p.name)}" class="w-full h-full object-cover transform hover:scale-110 transition-transform duration-500">
+                            <img src="${escapeHTML(sizedUrl(p.image, 500))}" loading="lazy" decoding="async" onerror="imgFallback(this)" alt="${escapeHTML(p.name)}" class="w-full h-full object-cover transform hover:scale-110 transition-transform duration-500">
                         </div>
                         <div class="w-2/3 sm:w-3/5 p-4 flex flex-col justify-between">
                             <div>
@@ -431,7 +436,7 @@
             products.forEach(p => {
                 container.innerHTML += `
                     <div class="bg-gray-50 rounded-xl p-4 border border-gray-200 flex flex-row gap-4 items-center">
-                        <img id="admin-img-${p.id}" src="${escapeHTML(safeUrl(p.image))}" onerror="imgFallback(this)" alt="${escapeHTML(p.name)}" class="w-24 h-24 rounded-lg object-cover shadow-sm">
+                        <img id="admin-img-${p.id}" src="${escapeHTML(sizedUrl(p.image, 300))}" loading="lazy" decoding="async" onerror="imgFallback(this)" alt="${escapeHTML(p.name)}" class="w-24 h-24 rounded-lg object-cover shadow-sm">
                         <div class="flex-grow">
                             <h3 class="font-bold text-gray-800">${escapeHTML(p.name)}</h3>
                             <p class="text-sm text-gray-500 mb-2">ราคา ${p.price} บาท</p>
@@ -544,14 +549,15 @@
             input.value = '';
             if (!file) return;
 
-            const url = await uploadImageFile(file, productId, 1000);
+            const url = await uploadImageFile(file, productId, 600);
             if (!url) return;
 
             const p = products.find(x => x.id === productId);
             if (p) {
                 p.image = url;
-                document.getElementById(`admin-img-${productId}`).src = safeUrl(url);
+                document.getElementById(`admin-img-${productId}`).src = sizedUrl(url, 300);
                 renderCustomerProducts();
+                saveInitCache();
                 showToast(`✅ บันทึกรูปภาพ ${p.name} เรียบร้อย`);
             }
         }
@@ -562,12 +568,11 @@
             input.value = '';
             if (!file) return;
 
-            const url = await uploadImageFile(file, 'logo', 400);
+            const url = await uploadImageFile(file, 'logo', 200);
             if (!url) return;
 
-            currentLogo = url;
-            document.getElementById('navLogo').src = safeUrl(url);
-            document.getElementById('adminLogoPreview').src = safeUrl(url);
+            setLogo(url);
+            saveInitCache();
             showToast('✅ บันทึกโลโก้ร้านเรียบร้อย');
         }
 
@@ -815,6 +820,21 @@
         // ---------------------------------------------------------
         // Export
         // ---------------------------------------------------------
+        let html2pdfPromise = null;
+        function loadHtml2Pdf() {
+            if (window.html2pdf) return Promise.resolve();
+            if (!html2pdfPromise) {
+                html2pdfPromise = new Promise((resolve, reject) => {
+                    const sc = document.createElement('script');
+                    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+                    sc.onload = resolve;
+                    sc.onerror = () => { html2pdfPromise = null; reject(new Error('โหลดตัวสร้าง PDF ไม่สำเร็จ')); };
+                    document.head.appendChild(sc);
+                });
+            }
+            return html2pdfPromise;
+        }
+
         function generatePDF() {
             if (orders.length === 0) {
                 showModal('ข้อมูลว่างเปล่า', 'ไม่มีรายการสั่งซื้อให้ดาวน์โหลด');
@@ -835,7 +855,7 @@
             };
 
             showToast('⏳ กำลังสร้างไฟล์ PDF...');
-            html2pdf().set(opt).from(element).save()
+            loadHtml2Pdf().then(() => html2pdf().set(opt).from(element).save())
                 .catch(() => showModal('ผิดพลาด', 'สร้างไฟล์ PDF ไม่สำเร็จ'))
                 .finally(() => {
                     header.classList.add('hidden');
@@ -916,23 +936,49 @@
         // ---------------------------------------------------------
         // Init
         // ---------------------------------------------------------
+        const CACHE_KEY = 'bananaShopInit_v1';
+
+        function readInitCache() {
+            try { return JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); } catch (e) { return null; }
+        }
+
+        function saveInitCache() {
+            try {
+                const data = { LOGO_URL: currentLogo };
+                products.forEach(p => { data['IMG_' + p.id] = p.image; });
+                localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+            } catch (e) { /* ใช้แคชไม่ได้ก็ข้าม */ }
+        }
+
+        function setLogo(url) {
+            currentLogo = safeUrl(url);
+            document.getElementById('navLogo').src = sizedUrl(currentLogo, 200);
+            document.getElementById('adminLogoPreview').src = sizedUrl(currentLogo, 300);
+        }
+
+        // ใส่ข้อมูลรูป (จากแคชหรือเซิร์ฟเวอร์) คืนค่า true ถ้ารูปสินค้ามีการเปลี่ยน
+        function applyInitData(data) {
+            let changed = false;
+            if (data.LOGO_URL && safeUrl(data.LOGO_URL) !== currentLogo) setLogo(data.LOGO_URL);
+            products.forEach(p => {
+                const u = data['IMG_' + p.id];
+                if (u && u !== p.image) { p.image = u; changed = true; }
+            });
+            return changed;
+        }
+
         async function initApp() {
+            // 1) แสดงรูปจากแคชในเครื่องทันที (ถ้าเคยเข้าเว็บมาก่อน)
+            const cached = readInitCache();
+            if (cached) { try { applyInitData(cached); } catch (e) { /* ข้าม */ } }
             try { renderCustomerProducts(); } catch (err) { console.error('Render Error:', err); }
 
+            // 2) ถามเซิร์ฟเวอร์เบื้องหลัง แล้วอัปเดตเฉพาะเมื่อมีรูปเปลี่ยน
             try {
                 const res = await apiCall('init');
                 if (res.success && res.data) {
-                    if (res.data.LOGO_URL) {
-                        currentLogo = safeUrl(res.data.LOGO_URL);
-                        document.getElementById('navLogo').src = currentLogo;
-                        document.getElementById('adminLogoPreview').src = currentLogo;
-                    }
-                    let needUpdate = false;
-                    products.forEach(p => {
-                        const u = res.data[`IMG_${p.id}`];
-                        if (u) { p.image = u; needUpdate = true; }
-                    });
-                    if (needUpdate) renderCustomerProducts();
+                    if (applyInitData(res.data)) renderCustomerProducts();
+                    saveInitCache();
                 }
             } catch (e) {
                 console.log('ใช้งานรูปภาพตัวอย่างเริ่มต้น');
