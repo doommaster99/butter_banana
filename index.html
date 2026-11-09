@@ -147,7 +147,7 @@
                 </div>
                 <div class="flex-grow">
                     <h2 class="text-2xl font-bold text-gray-800 mb-2">อัปเดตโลโก้ร้านค้า</h2>
-                    <p class="text-gray-500 mb-4 text-sm">อัปโหลดรูปภาพใหม่ ระบบจะย่อขนาดและปรับเป็นวงกลมให้อัตโนมัติ (รองรับ JPG, PNG, WEBP)</p>
+                    <p class="text-gray-500 mb-4 text-sm">อัปโหลดรูปภาพใหม่ ระบบจะย่อขนาด แปลงเป็น WebP และปรับเป็นวงกลมให้อัตโนมัติ (รองรับ JPG, PNG, WEBP)</p>
                     <label class="cursor-pointer bg-green-100 hover:bg-green-200 text-green-700 font-medium px-4 py-2 rounded-lg transition-colors border border-green-300 inline-block">
                         <span>📸 เลือกรูปโลโก้ใหม่</span>
                         <input type="file" accept="image/jpeg,image/png,image/webp" class="hidden" onchange="handleLogoUpload(event)">
@@ -515,10 +515,16 @@
                         canvas.width = w;
                         canvas.height = h;
                         const ctx = canvas.getContext('2d');
-                        ctx.fillStyle = '#ffffff';
-                        ctx.fillRect(0, 0, w, h);
-                        ctx.drawImage(img, 0, 0, w, h);
-                        resolve(canvas.toDataURL('image/jpeg', quality));
+                        ctx.drawImage(img, 0, 0, w, h);   // WebP เก็บพื้นโปร่งใสได้
+                        let out = canvas.toDataURL('image/webp', quality);
+                        // เบราว์เซอร์เก่าที่บันทึก WebP ไม่ได้ -> ใช้ JPG พื้นขาวแทน
+                        if (!out.startsWith('data:image/webp')) {
+                            ctx.globalCompositeOperation = 'destination-over';
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fillRect(0, 0, w, h);
+                            out = canvas.toDataURL('image/jpeg', quality);
+                        }
+                        resolve(out);
                     };
                     img.src = e.target.result;
                 };
