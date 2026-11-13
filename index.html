@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ร้านกล้วยไข่อบเนย - สั่งซื้อออนไลน์</title>
+    <title>ร้านกล้วยอบเนย - สั่งซื้อออนไลน์</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://drive.google.com">
     <link rel="preconnect" href="https://lh3.googleusercontent.com" crossorigin>
@@ -27,7 +27,7 @@
             <div class="flex justify-between items-center h-full relative">
                 <div class="flex items-center gap-3 sm:gap-4">
                     <img id="navLogo" src="https://placehold.co/100x100/EAB308/ffffff?text=Logo" data-fallback="https://placehold.co/100x100/EAB308/ffffff?text=Logo" onerror="imgFallback(this)" alt="Logo" class="relative top-3 z-50 flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-4 border-white shadow-lg bg-white">
-                    <span class="font-bold text-lg sm:text-xl text-white whitespace-nowrap">ร้านกล้วยไข่อบเนย</span>
+                    <span class="font-bold text-lg sm:text-xl text-white whitespace-nowrap">ร้านกล้วยอบเนย</span>
                 </div>
                 <div class="flex space-x-2 sm:space-x-4">
                     <button onclick="switchView('customer-view')" class="text-white hover:text-yellow-400 font-medium transition-colors text-sm sm:text-base">หน้าสั่งซื้อ</button>
@@ -43,9 +43,8 @@
         <!-- ================= CUSTOMER VIEW ================= -->
         <div id="customer-view" class="block">
             <div class="text-center mb-10">
-                <h1 class="text-4xl font-bold text-green-700 mb-2">สั่งซื้อกล้วยไข่อบเนย</h1>
+                <h1 class="text-4xl font-bold text-green-700 mb-2">สั่งซื้อกล้วยอบเนยแสนอร่อย</h1>
                 <p class="text-gray-600">กรอบ หอม หวานมัน เคี้ยวเพลินจนหยุดไม่ได้!</p>
-                <p class="text-gray-600">ผลิตจากวัตถุดิบธรรมชาติ ไร้ไขมัน ไม่มีวัตถุกันเสีย</p>
             </div>
 
             <div class="space-y-10">
@@ -84,6 +83,9 @@
                             </div>
                         </div>
 
+                        <div id="closedBanner" class="hidden bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 mb-4 text-sm text-center font-medium">
+                            ⛔ ขณะนี้ปิดรับออเดอร์ชั่วคราว
+                        </div>
                         <form id="orderForm" onsubmit="handleOrderSubmit(event)" class="space-y-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ-นามสกุล *</label>
@@ -102,7 +104,7 @@
                                 </div>
                                 <textarea id="custAddress" rows="3" maxlength="500" placeholder="เว้นว่างได้ หรือกดแชร์พิกัด" class="w-full px-4 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-green-400 outline-none transition-shadow resize-none"></textarea>
                             </div>
-                            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-lg py-3 px-4 rounded-xl shadow-lg transition-transform transform hover:-translate-y-1 mt-4 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+                            <button type="submit" id="submitOrderBtn" onclick="if(!ordersOpen){showOrdersClosedModal();return false;}" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-lg py-3 px-4 rounded-xl shadow-lg transition-transform transform hover:-translate-y-1 mt-4 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
                                 ยืนยันการสั่งซื้อ
                             </button>
                         </form>
@@ -138,6 +140,17 @@
                 </h1>
                 <button onclick="logout()" class="bg-gray-800 hover:bg-gray-900 text-white px-6 py-2 rounded-full font-medium transition-colors shadow">
                     ออกจากระบบ
+                </button>
+            </div>
+
+            <!-- เปิด/ปิดรับออเดอร์ -->
+            <div class="bg-white rounded-3xl shadow-xl p-6 sm:p-8 mb-6 border-t-8 border-green-500 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="text-center sm:text-left">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-1">🛎️ สถานะการรับออเดอร์</h2>
+                    <p id="ordersStatusText" class="text-sm font-medium text-gray-600">กำลังตรวจสอบสถานะ...</p>
+                </div>
+                <button type="button" id="ordersToggle" role="switch" aria-checked="true" aria-label="เปิดหรือปิดรับออเดอร์" onclick="toggleOrders()" class="relative inline-flex h-9 w-16 flex-shrink-0 items-center rounded-full bg-green-500 transition-colors focus:outline-none focus:ring-2 focus:ring-green-400">
+                    <span id="ordersKnob" class="inline-block h-7 w-7 transform rounded-full bg-white shadow transition-transform translate-x-8"></span>
                 </button>
             </div>
 
@@ -626,6 +639,7 @@
                     renderAdminProducts();
                     switchView('admin-dashboard-view');
                     loadOrdersData();
+                    refreshOrdersStatus();
                     if (res.data.mustChange) {
                         showModal('กรุณาเปลี่ยนรหัสผ่าน', 'ตอนนี้ยังใช้รหัสผ่านเริ่มต้นอยู่ เพื่อความปลอดภัยโปรดเปลี่ยนรหัสผ่านทันที');
                         document.getElementById('change-password-card').scrollIntoView({ behavior: 'smooth' });
@@ -653,6 +667,7 @@
                 renderAdminProducts();
                 switchView('admin-dashboard-view');
                 loadOrdersData();
+                refreshOrdersStatus();
             } else {
                 switchView('admin-login-view');
                 document.getElementById('adminPassword').value = '';
@@ -694,9 +709,80 @@
         // ---------------------------------------------------------
         // สั่งซื้อ
         // ---------------------------------------------------------
+        // ---------------------------------------------------------
+        // เปิด/ปิดรับออเดอร์
+        // ---------------------------------------------------------
+        let ordersOpen = true;
+
+        function updateOrdersUI() {
+            const toggle = document.getElementById('ordersToggle');
+            const knob = document.getElementById('ordersKnob');
+            const text = document.getElementById('ordersStatusText');
+            const banner = document.getElementById('closedBanner');
+            const btn = document.getElementById('submitOrderBtn');
+
+            if (toggle && knob) {
+                toggle.setAttribute('aria-checked', String(ordersOpen));
+                toggle.classList.toggle('bg-green-500', ordersOpen);
+                toggle.classList.toggle('bg-gray-400', !ordersOpen);
+                knob.classList.toggle('translate-x-8', ordersOpen);
+                knob.classList.toggle('translate-x-1', !ordersOpen);
+            }
+            if (text) {
+                text.textContent = ordersOpen
+                    ? '🟢 เปิดรับออเดอร์ - ลูกค้าสั่งซื้อได้ตามปกติ'
+                    : '🔴 ปิดรับออเดอร์ชั่วคราว - ลูกค้ากดสั่งซื้อไม่ได้';
+            }
+            if (banner) banner.classList.toggle('hidden', ordersOpen);
+            if (btn) {
+                btn.textContent = ordersOpen ? 'ยืนยันการสั่งซื้อ' : 'ปิดรับออเดอร์ชั่วคราว';
+                btn.classList.toggle('bg-green-600', ordersOpen);
+                btn.classList.toggle('hover:bg-green-700', ordersOpen);
+                btn.classList.toggle('bg-gray-400', !ordersOpen);
+                btn.classList.toggle('cursor-not-allowed', !ordersOpen);
+            }
+        }
+
+        function setOrdersOpenState(open) {
+            ordersOpen = !!open;
+            updateOrdersUI();
+        }
+
+        function showOrdersClosedModal() {
+            showModal('ปิดรับออเดอร์ชั่วคราว', 'ขออภัย ขณะนี้ร้านปิดรับออเดอร์ชั่วคราว\nกรุณากลับมาสั่งซื้อใหม่ภายหลัง หรือติดต่อร้านที่เบอร์ 096-863-4064');
+        }
+
+        function toggleOrders() {
+            const next = !ordersOpen;
+            showConfirm(
+                next ? 'เปิดรับออเดอร์' : 'ปิดรับออเดอร์ชั่วคราว',
+                next ? 'ต้องการเปิดรับออเดอร์ใช่หรือไม่?\nลูกค้าจะสั่งซื้อได้ตามปกติ'
+                     : 'ต้องการปิดรับออเดอร์ชั่วคราวใช่หรือไม่?\nลูกค้าจะกดสั่งซื้อไม่ได้จนกว่าจะเปิดรับอีกครั้ง',
+                () => saveOrdersOpen(next)
+            );
+        }
+
+        async function saveOrdersOpen(open) {
+            showToast('⏳ กำลังบันทึกสถานะ...');
+            const res = await apiCall('setOrdersOpen', { open: open });
+            if (handleUnauthorized(res)) return;
+            if (res.success) {
+                setOrdersOpenState(open);
+                showToast(open ? '✅ เปิดรับออเดอร์แล้ว' : '⛔ ปิดรับออเดอร์ชั่วคราวแล้ว');
+            } else {
+                showModal('ผิดพลาด', res.message);
+            }
+        }
+
+        async function refreshOrdersStatus() {
+            const res = await apiCall('init');
+            if (res.success && res.data) setOrdersOpenState(res.data.ORDERS_OPEN !== '0');
+        }
+
         async function handleOrderSubmit(e) {
             e.preventDefault();
             if (isSubmitting) return;
+            if (!ordersOpen) { showOrdersClosedModal(); return; }
 
             const totalItems = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
             if (totalItems === 0) {
@@ -736,7 +822,12 @@
                     const total = Number(res.data && res.data.total) || 0;
                     showModal('สำเร็จ!', `ขอบคุณสำหรับการสั่งซื้อ 🍌\nยอดรวม ${total.toLocaleString()} บาท\nเราได้รับข้อมูลของคุณและบันทึกลงระบบแล้ว`);
                 } else {
-                    showModal('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้: ' + res.message);
+                    if (res.message === 'ORDERS_CLOSED') {
+                        setOrdersOpenState(false);
+                        showOrdersClosedModal();
+                    } else {
+                        showModal('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้: ' + res.message);
+                    }
                 }
             } finally {
                 isSubmitting = false;
@@ -976,6 +1067,7 @@
 
         async function initApp() {
             // 1) แสดงรูปจากแคชในเครื่องทันที (ถ้าเคยเข้าเว็บมาก่อน)
+            updateOrdersUI();
             const cached = readInitCache();
             if (cached) { try { applyInitData(cached); } catch (e) { /* ข้าม */ } }
             try { renderCustomerProducts(); } catch (err) { console.error('Render Error:', err); }
@@ -985,6 +1077,9 @@
                 const res = await apiCall('init');
                 if (res.success && res.data) {
                     if (applyInitData(res.data)) renderCustomerProducts();
+                    const open = res.data.ORDERS_OPEN !== '0';
+                    setOrdersOpenState(open);
+                    if (!open) showOrdersClosedModal();   // แจ้งทันทีที่เปิดเว็บตอนปิดรับออเดอร์
                     saveInitCache();
                 }
             } catch (e) {
